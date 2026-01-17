@@ -1,0 +1,42 @@
+name: Run benchmarks and deploy results
+
+on:
+  workflow_dispatch:  # Allow manual trigger
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  benchmark:
+    runs-on: self-hosted
+    environment:
+      name: github-pages
+    steps:
+      - name: Checkout bpfilter repository
+        uses: actions/checkout@v4
+        with:
+          repository: facebook/bpfilter
+          ref: bfbencher
+          fetch-depth: 0
+
+      - name: Run bfbencher
+        run: tools/benchmarks/bfbencher --since 2e64a73 --cache-dir ~/bfbencher-cache --report-path index.html --no-tui
+
+      - name: Prepare output directory
+        run: |
+          mkdir -p _site
+          mv index.html _site/
+
+      - name: Upload artifact for Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
